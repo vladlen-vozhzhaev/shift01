@@ -1,16 +1,52 @@
-//const math = require('./math.js');
+const express = require('express');
+const app = express();
 
-/*
-const {add, subtract} = require('./math.js');
+let tasks = [];
+let nextId = 1;
 
-console.log(add(4,5))
+app.use(express.json());
+app.use(express.static('public'));
+app.get("/api/tasks", (req, res)=>{
+   res.json(tasks);
+})
 
-const fs = require('fs')*/
+app.get("/api/tasks/:id", (req, res)=>{
+   const task = tasks.find(t=>t.id === parseInt(req.params.id));
+   if (!task) {
+      return res.status(404).json({error: "Task not found"});
+   }
+   res.json(task);
+})
 
-/*
-import {add, subtract} from "./math.js";
+app.post('/api/tasks', (req, res)=>{
+   const {title, description} = req.body;
+   if (!title){
+      return res.status(400).json({error: "Title is required"});
+   }
+
+   const newTask = {
+      id: nextId++,
+      title,
+      description: description,
+      completed: false,
+      createAt: new Date().toISOString()
+   }
+
+   tasks.push(newTask);
+   res.status(201).json(newTask);
+});
+
+app.delete('/api/tasks/:id', (req, res)=>{
+   const id = parseInt(req.params.id);
+   const taskIndex = tasks.findIndex(t=> t.id === id);
+   if(taskIndex === -1){
+      return res.status(404).json({error: "Task not found"});
+   }
+   tasks.splice(taskIndex, 1);
+   res.status(204).send();
+
+});
 
 
-console.log(add(4,5))
-console.log(subtract(4,5))
-*/
+
+app.listen(3000);

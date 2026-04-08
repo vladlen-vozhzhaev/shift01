@@ -1,12 +1,34 @@
 const express = require('express');
-const app = express();
+const mysql = require('mysql2/promise')
+const TaskModel = require('./models/taskModel');
 
+const app = express();
+const pool = mysql.createPool({
+   host: '127.0.1.16', // localhost или 127.0.0.1
+   user: 'root',
+   password: '',
+   database: 'task_manager',
+   waitForConnections: true,
+   connectionLimit: 10
+});
 let tasks = [];
 let nextId = 1;
 
 app.use(express.json());
 app.use(express.static('public'));
-app.get("/api/tasks", (req, res)=>{
+
+app.use((req, res, next)=>{
+   console.log('Вызван посредник (middleware)');
+   next();
+});
+let count = 0;
+function rateCounter(req, res, next){
+   count++;
+   console.log(count);
+   next();
+}
+
+app.get("/api/tasks", rateCounter ,(req, res)=>{
    res.json(tasks);
 })
 
@@ -18,22 +40,17 @@ app.get("/api/tasks/:id", (req, res)=>{
    res.json(task);
 })
 
-app.post('/api/tasks', (req, res)=>{
+app.post('/api/tasks', async (req, res)=>{
    const {title, description} = req.body;
    if (!title){
       return res.status(400).json({error: "Title is required"});
    }
-
-   const newTask = {
-      id: nextId++,
-      title,
-      description: description,
-      completed: false,
-      createAt: new Date().toISOString()
+   try{
+      const newTask = await TaskModel.create(title, description);
+      res.status(201).json(newTask);
+   }catch (e){
+      res.status(500).json({error: e.message});
    }
-
-   tasks.push(newTask);
-   res.status(201).json(newTask);
 });
 
 app.delete('/api/tasks/:id', (req, res)=>{
